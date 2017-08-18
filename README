@@ -1,0 +1,12 @@
+		README for coverity-submit
+
+If you are a registered user of Coverity's self-build server 
+and have the cov-build tools installed locally, this script
+automates the process of running the tools and submitting an
+analysis request to Coverity. It can be configured to store
+build passwords, local build commands, and other required
+information for multiple projects so you don't have to
+remember it - just call the tool and let it manage the details.
+
+ 	       	    	     	  Eric S, Raymond <esr@thyrsus.com>
+				       May 2012

@@ -1,0 +1,200 @@
+<?xml version="1.0" encoding="ISO-8859-1"?>
+<!DOCTYPE refentry PUBLIC
+   "-//OASIS//DTD DocBook XML V4.1.2//EN"
+   "http://www.oasis-open.org/docbook/xml/4.1.2/docbookx.dtd"[]>
+<refentry id='coverity-submit.1'>
+<refentryinfo><date>12 May 2012</date></refentryinfo>
+<refmeta>
+<refentrytitle>coverity-submit</refentrytitle>
+<manvolnum>1</manvolnum>
+<refmiscinfo class="source">Coverity</refmiscinfo>
+<refmiscinfo class="manual">Coverity Documentation</refmiscinfo>
+</refmeta>
+<refnamediv id='name'>
+<refname>coverity-submit</refname>
+<refpurpose>job submission script for Coverity demo server</refpurpose>
+</refnamediv>
+
+<refsynopsisdiv id='synopsis'>
+
+<cmdsynopsis>
+  <command>coverity-submit</command>
+      <arg choice='opt'>-b <replaceable>build-version</replaceable></arg>
+      <arg choice='opt'>-n </arg>
+      <arg choice='opt'>-t <replaceable>project-tag</replaceable></arg>
+      <arg choice='opt'>-v </arg>
+      <arg choice='opt'><replaceable>project-name</replaceable></arg>
+</cmdsynopsis>
+</refsynopsisdiv>
+
+<refsect1><title>DESCRIPTION</title>
+
+<para>This tool aims to make submitting projects for code auditing on
+the demonstration Coverity server into a one-step operation.  It
+automates the sequence of (a) running cov-build locally, (b) bundling
+the results into a tarball with a properly formatted README, (c)
+submitting a tarball and analysis request to the server, and (d)
+retrieving the request status.</para>
+
+<para>Once you have the enabling metadata data for a project set up,
+you can usually submit an analysis job just by running
+<command>coverity-submit</command> without arguments. The Coverity
+analyzer will email you a success or failure notification when the
+analysis results are available.</para>
+
+</refsect1>
+<refsect1><title>CONFIGURATION</title>
+
+<para>To use this tool, you need to set up a configuration file named
+either <filename>.coverity-submit</filename> or
+<filename>.config/coverity-submit</filename> in your home directory.
+This configuration file is best explained by example.</para>
+
+<programlisting>
+[ALL]
+name: Eric S. Raymond
+userid: esr
+email: esr@thyrsus.com
+tools: /usr/local/coverity/bin
+
+[gpsd]
+token: XXXXXX
+prebuild: scons -c
+build: scons
+postbuild: 
+
+[giflib]
+token: YYYYYYY
+prebuild: autogen.sh &amp;&amp; make clean
+build: make -k
+postbuild: 
+
+[cvs-fast-export]
+name: parsecvs
+token: ZZZZZZZ
+prebuild: make clean
+build: make
+postbuild:
+
+[ntpsec]
+name: ntpsec
+token: AAAAAAA
+prebuild: waf clean
+build: waf
+postbuild:
+
+</programlisting>
+
+<para>You may begin with an [ALL] section giving your name and userid on the
+Coverity server. If you don't specify these, the tool will use your local
+usename and the first (comma-separated) portion of your GECOS field.</para>
+
+<para>You may specify the email address to which success
+or failure notifications should be mailed for all other projects here, 
+or specify different addresses per-project.</para>
+
+<para>If cov-build is not in your execution path, you may use the
+'tools' option to tell <application>coverity-submit</application>
+where to find it.</para>
+
+<para>This configuration describes four different (real) projects; one
+with an scons-based build, one with an autotools-based build, one with
+a plain makefile build, and one with a waf build. For each project you
+must specify the project's authentication token and the local build
+command to pass to cov-build. You may optionally specify local
+prebuild and postbuild commands.</para>
+
+<para>The third example also illustrates how to describe a project
+that is known to Coverity by a different name (in this case
+<quote>parsecvs</quote>) from the basename of the directory you keep
+it in (in this case <quote>cvs-fast-export</quote>).  This can of
+course easily happen if your project's public name changes after
+you register it.</para>
+</refsect1>
+<refsect1><title>OPERATION</title>
+
+<para>The first thing <application>coverity-submit</application> does
+when invoked is figure out which project profile to use.  If no
+argument is specified but the basename of the current directory
+matches a project, it is selected. Otherwise, a command-line argument
+can specify the project name; it is a fatal error for the argument, if
+given, not to match the name of one of the configured project profiles.</para>
+
+<para>Note: because your configuration file contains privileged
+information (the per-project Coverity authentication tokens) it should
+not have read or write permissions for anyone but its owner set. When
+<application>coverity-submit</application> detects such insecure
+permissions, it will fix them (telling you it is doing so).</para>
+
+<para>The <option>-n</option> option says to display all the commands that
+would be run without actually executing them. The <option>-v</option> option 
+enables slightly more verbose progress messages, and copies the Coverity
+build-log.txt from the run to your working directory.</para>
+
+<para>The <option>-b</option> option specifies an arbitrary build
+version to associate with the submission. If coverity-submit is run 
+at the top level of a version-control repository, the build version may 
+default to a description of the head commit; presently this feature
+is supported under git, hg, bzr, and svn.</para>
+
+<para>The <option>-t</option> option specifies an arbitrary project
+tag or description to associate with the submission. This text is
+visible in the "snapshots" view of the Coverity web interface. If you
+do not specify a description, the ISO8601 date that the submission
+was initiated is used.</para>
+
+<para>Once <application>coverity-submit</application> has determined
+which project profile to use, it then performs the following steps:</para>
+
+<procedure>
+<step><para>The project's local prebuild command, if specified.</para></step>
+<step><para>The project's local build command.</para></step>
+<step><para>The project's local postbuild command, if specified.</para></step>
+<step><para>Generating a README and bundling it into a tarball with the scan results.</para></step>
+<step><para>Sending the tarball and an analysis job request to the Coverity server.</para></step>
+</procedure>
+
+<para>The script will report the result of the job request by dumping the
+server's HTML response.</para>
+
+</refsect1>
+<refsect1><title>TROUBLESHOOTING</title>
+
+<para>If, after a period of nornal operation, you see a complaint that
+no compilation units are being built, this may mean your version of
+the Coverity build tools has gone stale.  This has been known to
+happen on GCC version bumps. Try installing an-up-to-date version of
+the tools.</para>
+
+</refsect1>
+<refsect1><title>BACKWARD COMPATIBILITY</title>
+
+<para>For backward compatibity, 'password' is treated as a synonym for
+'token'; the change follows a change in the terminology of Coverity's
+configuration instructions.</para>
+
+<para>The <option>build</option> and <option>advertise</option>
+options of versions 1.1 and previously are no longer needed, as
+Coverity has changed its submission form to support direct upload of
+the results tarball.</para>
+
+</refsect1>
+<refsect1><title>PREREQUISITES</title>
+
+<para>Requires Python, curl, and <ulink
+url="https://scan.coverity.com/download">cov-build</ulink>.</para>
+
+<para>The Coverity Scan facility has a home page:
+<ulink url="https://scan.coverity.com">https://scan.coverity.com</ulink>.
+You can find instructions on how to register projects for scanning there.
+</para>
+
+</refsect1>
+<refsect1 id='maintainer'><title>AUTHOR</title>
+
+<para>Eric S. Raymond <email>esr@thyrsus.com</email>.  There is a
+project page for this tool at <ulink
+url="http://www.catb.org/~esr/coverity-submit/">http://www.catb.org/~esr/coverity-submit/coverity-submit.html</ulink>.</para>
+</refsect1>
+
+</refentry>
