@@ -201,7 +201,7 @@ if __name__ == '__main__':
     --form email=%(email)s \
     --form version=%(build_version)s \
     --form description=%(description)s \
-      https://scan.coverity.com/builds?project=%(covname)s \
+      https://scan.coverity.com/builds?project=%(userid)s/%(covname)s \
      ''' % globals())
     try:
         os.remove(os.path.join(tmpdir, tarball))
