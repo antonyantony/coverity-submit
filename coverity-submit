@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 #
 # coverity-submit - submit project to Coverity for scanning
 #
@@ -8,6 +8,7 @@
 # This code runs under both Python 2 and Python 3. Preserve this property!
 from __future__ import print_function
 
+import re
 import os, pwd, sys, stat
 import getopt, tempfile, shutil, datetime, subprocess
 
@@ -167,7 +168,10 @@ if __name__ == '__main__':
     print("Rebuilding and scanning...")
     if prebuild:
         do_or_die(prebuild)
+
+    # cov-build build must in the path.
     do_or_die("rm -fr cov-int && cov-build --dir cov-int " + build)
+    #do_or_die("rm -fr cov-int && /home/build/cov-analysis-linux64-2017.07/bin/cov-build  --dir cov-int " + build)
     if postbuild:
         do_or_die(postbuild)
 
@@ -193,8 +197,7 @@ if __name__ == '__main__':
     if verbose and not noexec:
         shutil.copy("cov-int/build-log.txt", "build-log.txt")
     do_or_die("mv cov-int %s; (cd %s; tar -czf %s README cov-int; rm -fr README cov-int)" % (tmpdir, tmpdir, tarball))
-    print("Posting the analysis request...")
-    do_or_die('''curl \
+    cmd = ('''curl \
     --form file=@%(tmpdir)s/%(tarball)s \
     --form project=%(covname)s \
     --form token=%(token)s \
@@ -203,12 +206,21 @@ if __name__ == '__main__':
     --form description=%(description)s \
       https://scan.coverity.com/builds?project=%(userid)s/%(covname)s \
      ''' % globals())
+    print ("%s" % cmd)
+    cmd_output =  subprocess.getoutput(cmd)
+    print("Posting the analysis request... %s%", cmd)
+    if not cmd_output:
+        print("ERROR something went wrong")
+    else :
+        if re.match("Build successfully submitted", cmd_output):
+            print("Done. You'll get mail at %s." % email)
+        else :
+            print("ERROR %s", cmd_output)
     try:
-        os.remove(os.path.join(tmpdir, tarball))
-        os.rmdir(tmpdir)
+       os.remove(os.path.join(tmpdir, tarball))
+       os.rmdir(tmpdir)
     except OSError:
         pass
-    print("Done. You'll get mail at %s." % email)
 
 # The following sets edit modes for GNU EMACS
 # Local Variables:
